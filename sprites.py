@@ -212,8 +212,20 @@ class Player(pygame.sprite.Sprite):
 # Creating a NPC class
 class NPC(pygame.sprite.Sprite):
     # Initialize the player class
-    def __init__(self, x, y, face, lines):
+    def __init__(self, position_lists, face, lines, collide_list, player):
         pygame.sprite.Sprite.__init__(self)
+
+        self.collide_list = collide_list
+        self.player = player
+
+        self.position_lists = position_lists
+        self.next_pos = (0, 0)
+        self.speed_y = 0
+        self.speed_x = 0
+        self.speed = 2
+
+        self.walk_counter = 0
+        self.walk_number = 1
 
         self.face = face
         self.lines = lines
@@ -224,24 +236,176 @@ class NPC(pygame.sprite.Sprite):
 
         self.rect = self.image_rect.copy()
         self.rect.inflate_ip((-40,-40))
-        self.rect.center = (x, y)
+        self.rect.x = self.position_lists[0][0][0]
+        self.rect.y = self.position_lists[0][0][1]
+
+        self.prev_pos = self.rect.center
+        self.current_pos = self.rect.center
 
         self.talk_zone = pygame.Rect((0, 0, 110, 110))
         self.talk_zone.center = self.rect.center
 
         self.kill_zone = pygame.Rect((0, 0, 64, 42))
-        self.kill_zone.center = self.rect.center
-        self.kill_zone.y += 20
+        self.kill_zone.midtop = self.rect.center
 
         self.see_zone = pygame.Rect((0, 0, 128, 200))
-        self.see_zone.center = self.rect.center
-        self.see_zone.y -= 88
+        self.see_zone.midbottom = self.rect.center
 
     # Update the player class
     def update(self):
+        self.prev_pos = self.rect.center
+
+        # Move to the points specified in position_lists
+        if not self.player.in_conversation:
+            if len(self.position_lists) > 1:
+                for x in self.position_lists:
+                    if not x[1]:
+                        if self.rect.x > x[0][0]:
+                            if not (self.rect.x - self.speed) < x[0][0]:
+                                self.speed_x = -self.speed
+                            else:
+                                self.speed_x = x[0][0] - (self.rect.x - self.speed)
+                        elif self.rect.x < x[0][0]:
+                            if not (self.rect.x - self.speed) > x[0][0]:
+                                self.speed_x = self.speed
+                            else:
+                                self.speed_x = (self.rect.x - self.speed) - x[0][0]
+                        else:
+                            self.speed_x = 0
+
+                        if self.rect.y > x[0][1]:
+                            if not (self.rect.y - self.speed) < x[0][1]:
+                                self.speed_y = -self.speed
+                            else:
+                                self.speed_y = x[0][1] - (self.rect.y - self.speed)
+                        elif self.rect.y < x[0][1]:
+                            if not (self.rect.y - self.speed) > x[0][1]:
+                                self.speed_y = self.speed
+                            else:
+                                self.speed_y = (self.rect.y - self.speed) - x[0][1]
+                        else:
+                            self.speed_y = 0
+
+                        if self.speed_x == 0 and self.speed_y == 0:
+                            x[1] = True
+
+                        break
+                else:
+                    for y in self.position_lists:
+                        y[1] = False
+        else:
+            self.speed_x = 0
+            self.speed_y = 0
+
+        # Rotating based on direction
+        if self.speed_y < 0:
+            self.image = pygame.transform.rotate(self.image_original, 0)
+
+        if self.speed_x < 0:
+            self.image = pygame.transform.rotate(self.image_original, 90)
+
+        if self.speed_y > 0:
+            self.image = pygame.transform.rotate(self.image_original, 180)
+
+        if self.speed_x > 0:
+            self.image = pygame.transform.rotate(self.image_original, 270)
+
+        # X-axis movement
+        self.rect.x += self.speed_x
+
+        # Check if the NPC hit any walls during X-movement
+        if self.collide_list is not None:
+            hit_list = pygame.sprite.spritecollide(self, self.collide_list, False)
+            for hits in hit_list:
+                if self.speed_x > 0:
+                    self.rect.right = hits.rect.left
+                else:
+                    self.rect.left = hits.rect.right
+
+        # Check if the NPC hit the player during X-movement
+        if self.player is not None:
+            if self.rect.colliderect(self.player.rect):
+                if self.speed_x > 0:
+                    self.rect.right = self.player.rect.left
+                else:
+                    self.rect.left = self.player.rect.right
+
+        # Y-axis movement
+        self.rect.y += self.speed_y
+
+        # Check if the NPC hit any walls during Y-movement
+        if self.collide_list is not None:
+            hit_list = pygame.sprite.spritecollide(self, self.collide_list, False)
+            for hits in hit_list:
+                if self.speed_y > 0:
+                    self.rect.bottom = hits.rect.top
+                else:
+                    self.rect.top = hits.rect.bottom
+
+        # Check if the NPC hit the player during Y-movement
+        if self.player is not None:
+            if self.rect.colliderect(self.player.rect):
+                if self.speed_y > 0:
+                    self.rect.bottom = self.player.rect.top
+                else:
+                    self.rect.top = self.player.rect.bottom
+
+        self.current_pos = self.rect.center
+
+        # Walking animation
+        if (self.speed_x != 0 or self.speed_y != 0) and self.current_pos != self.prev_pos:
+            self.walk_counter += 1
+
+            if self.walk_counter >= 7:
+
+                self.walk_counter = 0
+                self.image_original = player_list[self.walk_number]
+                self.walk_number += 1
+
+                if self.walk_number >= 12:
+                    self.walk_number = 1
+        else:
+            self.image_original = player_list[0]
+
         # Reposition drawing rect & talk zone center
         self.image_rect.center = self.rect.center
         self.talk_zone.center = self.rect.center
+
+        if self.speed_y < 0:
+            self.see_zone.width = 150
+            self.see_zone.height = 350
+            self.see_zone.midbottom = self.rect.center
+
+            self.kill_zone.width = 64
+            self.kill_zone.height = 42
+            self.kill_zone.midtop = self.rect.center
+
+        if self.speed_x < 0:
+            self.see_zone.width = 350
+            self.see_zone.height = 150
+            self.see_zone.midright = self.rect.center
+
+            self.kill_zone.width = 42
+            self.kill_zone.height = 64
+            self.kill_zone.midleft = self.rect.center
+
+        if self.speed_y > 0:
+            self.see_zone.width = 150
+            self.see_zone.height = 350
+            self.see_zone.midtop = self.rect.center
+
+            self.kill_zone.width = 64
+            self.kill_zone.height = 42
+            self.kill_zone.midbottom = self.rect.center
+
+        if self.speed_x > 0:
+            self.see_zone.width = 350
+            self.see_zone.height = 150
+            self.see_zone.midleft = self.rect.center
+
+            self.kill_zone.width = 42
+            self.kill_zone.height = 64
+            self.kill_zone.midright = self.rect.center
 
     # Player draw method
     def draw(self, surf):

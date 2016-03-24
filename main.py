@@ -152,20 +152,32 @@ class Game:
         self.create_layer_2(self.current_room.level[1])
         self.create_layer_3(self.current_room.level[2])
 
+        self.current_room.collide_list = self.layer_2
+        self.current_room.npc_list.empty()
+        self.current_room.init_npcs()
+
     # Starting a new game
     def new(self):
-        self.current_room = room_1
 
         self.layer_1 = pygame.sprite.Group()
         self.layer_2 = pygame.sprite.Group()
         self.layer_3 = pygame.sprite.Group()
+
+        self.current_room = room_1
+
+        self.player = Player(self.layer_2, self.current_room.npc_list, self.game_display)
+
+        self.current_room.collide_list = self.layer_2
+        self.current_room.player = self.player
+        self.current_room.npc_list.empty()
+
+        self.current_room.init_npcs()
+
         self.text_boxes = pygame.sprite.Group()
         self.text_page = 1
         self.doors = pygame.sprite.Group()
 
         self.new_room()
-
-        self.player = Player(self.layer_2, self.current_room.npc_list, self.game_display)
 
         self.run()
 
@@ -197,6 +209,9 @@ class Game:
                     else:
                         self.player.test_for_npc()
 
+                if event.key == pygame.K_r:
+                    self.playing = False
+
     # Game loop - Update
     def update(self):
         self.current_room.npc_list.update()
@@ -205,13 +220,17 @@ class Game:
         # Make player switch room
         if self.player.rect.center[1] < 0:
             self.current_room = room_list[self.current_room.north_room_index]
+            self.current_room.player = self.player
             self.new_room()
             self.player.rect.y = display_height - (self.player.rect[3] / 2)
+            self.player.npc_list = self.current_room.npc_list
 
         if self.player.rect.center[1] > display_height:
             self.current_room = room_list[self.current_room.south_room_index]
+            self.current_room.player = self.player
             self.new_room()
             self.player.rect.y = 0 - (self.player.rect[3] / 2)
+            self.player.npc_list = self.current_room.npc_list
 
         if pygame.sprite.spritecollide(self.player, self.doors, False):
             self.current_room
@@ -223,17 +242,18 @@ class Game:
         self.layer_1.draw(self.game_display)
         self.layer_2.draw(self.game_display)
 
-        if self.current_room == room_1:
-            pygame.draw.rect(self.game_display, blue, self.current_room.name.talk_zone)
-            pygame.draw.rect(self.game_display, green, self.current_room.name.see_zone)
-            pygame.draw.rect(self.game_display, white, self.current_room.name.kill_zone)
         for draw_npcs in self.current_room.npc_list:
+            pygame.draw.rect(self.game_display, blue, draw_npcs.see_zone)
+            pygame.draw.rect(self.game_display, white, draw_npcs.kill_zone)
             draw_npcs.draw(self.game_display)
 
         self.player.draw(self.game_display)
-        pygame.draw.rect(self.game_display, green, self.player.rect)
 
         self.layer_3.draw(self.game_display)
+
+        for draw_line in self.current_room.npc_list:
+            if draw_line.see_zone.colliderect(self.player.rect):
+                pygame.draw.line(self.game_display, green, draw_line.rect.center, self.player.rect.center, 15)
 
         if self.player.in_conversation:
             self.text_boxes.empty()
