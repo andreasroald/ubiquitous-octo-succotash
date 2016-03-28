@@ -2,7 +2,7 @@
 
 game controls:
 WASD: movement
-SPACE/ENTER: talk to NPC
+SPACE (while behind an enemy and not seen): kill enemy
 
 level editor controls
 LEFT CLICK: place tile
