@@ -19,6 +19,8 @@ class Room_1(Room):
         self.collide_list = None
         self.player = None
 
+        self.cleared = False
+
     def init_npcs(self):
         # Room 1 NPCs
         self.name = NPC([
@@ -33,7 +35,7 @@ class Room_1(Room):
                                                      "l3": ""
                                               }
                                         }
-                        , self.collide_list, self.player)
+                        , self.collide_list, self.player, id=1)
 
         self.npc_list.add(self.name)
 
@@ -46,6 +48,8 @@ class Room_2(Room):
         self.south_room_index = 0
         self.collide_list = None
         self.player = None
+
+        self.cleared = False
 
     def init_npcs(self):
         # Room 2 NPCs
@@ -61,7 +65,7 @@ class Room_2(Room):
                                                      "l3": ""
                                               }
                                         }
-                        , self.collide_list, self.player)
+                        , self.collide_list, self.player, id=2)
 
         self.name2 = NPC([
                          [(702, 462), True], [(62, 462), False],
@@ -75,7 +79,7 @@ class Room_2(Room):
                                                      "l3": ""
                                               }
                                         }
-                        , self.collide_list, self.player)
+                        , self.collide_list, self.player, id=3)
 
         self.npc_list.add(self.name, self.name2)
 

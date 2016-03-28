@@ -35,6 +35,11 @@ def render_text(msg, color, display, y=0, x=0,  size="small"):
     text_rect.y = y
     display.blit(text_surface, text_rect)
 
+def render_text_center(msg, color, display, y=0, x=0,  size="small"):
+    text_surface, text_rect = text_object(msg, color, size)
+    text_rect.center = (display_width/2 + x, display_height/2 + y)
+    display.blit(text_surface, text_rect)
+
 
 # Creating a player class
 class Player(pygame.sprite.Sprite):
@@ -68,7 +73,10 @@ class Player(pygame.sprite.Sprite):
         self.walk_number = 1
 
         self.in_conversation = False
+        self.killing_npc = False
         self.talking_with = None
+
+        self.sound_level = 5
 
     # Player event handling
     def event_handling(self):
@@ -110,13 +118,13 @@ class Player(pygame.sprite.Sprite):
         self.mouse_x, self.mouse_y = pygame.mouse.get_pos()
 
         # Make player accelerate
-        if self.moving_up and not self.in_conversation:
+        if self.moving_up and not self.in_conversation and not self.killing_npc:
             self.speed_y = -5
-        if self.moving_left and not self.in_conversation:
+        if self.moving_left and not self.in_conversation and not self.killing_npc:
             self.speed_x = -5
-        if self.moving_down and not self.in_conversation:
+        if self.moving_down and not self.in_conversation and not self.killing_npc:
             self.speed_y = 5
-        if self.moving_right and not self.in_conversation:
+        if self.moving_right and not self.in_conversation and not self.killing_npc:
             self.speed_x = 5
 
         # Make diagonal movement as fast as horizontal/vertical
@@ -176,7 +184,7 @@ class Player(pygame.sprite.Sprite):
 
         # Walking animations
         if self.moving_up or self.moving_left or self.moving_down or self.moving_right:
-            if not self.in_conversation:
+            if not self.in_conversation and not self.killing_npc:
                 self.walk_counter += 1
 
                 if self.walk_counter >= 5:
@@ -190,6 +198,11 @@ class Player(pygame.sprite.Sprite):
         else:
             self.image_original = player_list[0]
 
+
+        # player killing sprite
+        if self.killing_npc:
+            self.image_original = player_killing
+
         # Reposition drawing rect
         self.image_rect.center = self.rect.center
 
@@ -202,6 +215,9 @@ class Player(pygame.sprite.Sprite):
 
     # Update the player class
     def update(self):
+        if self.sound_level > 0:
+            self.sound_level -= 1
+
         self.event_handling()
         self.movement()
 
@@ -212,20 +228,27 @@ class Player(pygame.sprite.Sprite):
 # Creating a NPC class
 class NPC(pygame.sprite.Sprite):
     # Initialize the player class
-    def __init__(self, position_lists, face, lines, collide_list, player):
+    def __init__(self, position_lists, face, lines, collide_list, player, id):
         pygame.sprite.Sprite.__init__(self)
 
         self.collide_list = collide_list
         self.player = player
 
+        self.id = id
+
         self.position_lists = position_lists
         self.next_pos = (0, 0)
         self.speed_y = 0
         self.speed_x = 0
-        self.speed = 2
+        self.speed = 1
 
         self.walk_counter = 0
         self.walk_number = 1
+
+        self.die_counter = 0
+        self.die_number = 0
+        self.dying = False
+        self.dead = False
 
         self.face = face
         self.lines = lines
@@ -239,8 +262,15 @@ class NPC(pygame.sprite.Sprite):
         self.rect.x = self.position_lists[0][0][0]
         self.rect.y = self.position_lists[0][0][1]
 
+        self.direction = 0
+
         self.prev_pos = self.rect.center
         self.current_pos = self.rect.center
+
+        self.player_npc_rect = pygame.Rect((-1, -1, 0, 0))
+
+        self.seeing_player = False
+        self.player_pos = None
 
         self.talk_zone = pygame.Rect((0, 0, 110, 110))
         self.talk_zone.center = self.rect.center
@@ -251,12 +281,15 @@ class NPC(pygame.sprite.Sprite):
         self.see_zone = pygame.Rect((0, 0, 128, 200))
         self.see_zone.midbottom = self.rect.center
 
+        self.hear_zone = pygame.Rect((0, 0, 8, 8))
+        self.hear_zone.center = self.rect.center
+
     # Update the player class
     def update(self):
         self.prev_pos = self.rect.center
 
         # Move to the points specified in position_lists
-        if not self.player.in_conversation:
+        if not self.player.in_conversation and not self.dying and not self.seeing_player:
             if len(self.position_lists) > 1:
                 for x in self.position_lists:
                     if not x[1]:
@@ -299,16 +332,18 @@ class NPC(pygame.sprite.Sprite):
 
         # Rotating based on direction
         if self.speed_y < 0:
-            self.image = pygame.transform.rotate(self.image_original, 0)
+            self.direction = 0
 
         if self.speed_x < 0:
-            self.image = pygame.transform.rotate(self.image_original, 90)
+            self.direction = 90
 
         if self.speed_y > 0:
-            self.image = pygame.transform.rotate(self.image_original, 180)
+            self.direction = 180
 
         if self.speed_x > 0:
-            self.image = pygame.transform.rotate(self.image_original, 270)
+            self.direction = 270
+
+        self.image = pygame.transform.rotate(self.image_original, self.direction)
 
         # X-axis movement
         self.rect.x += self.speed_x
@@ -356,7 +391,7 @@ class NPC(pygame.sprite.Sprite):
         if (self.speed_x != 0 or self.speed_y != 0) and self.current_pos != self.prev_pos:
             self.walk_counter += 1
 
-            if self.walk_counter >= 7:
+            if self.walk_counter >= 12:
 
                 self.walk_counter = 0
                 self.image_original = player_list[self.walk_number]
@@ -364,7 +399,7 @@ class NPC(pygame.sprite.Sprite):
 
                 if self.walk_number >= 12:
                     self.walk_number = 1
-        else:
+        elif not self.dying:
             self.image_original = player_list[0]
 
         # Reposition drawing rect & talk zone center
@@ -407,9 +442,25 @@ class NPC(pygame.sprite.Sprite):
             self.kill_zone.height = 64
             self.kill_zone.midright = self.rect.center
 
-    # Player draw method
+        self.hear_zone.center = self.rect.center
+
+    # NPC draw method
     def draw(self, surf):
         surf.blit(self.image, self.image_rect)
+
+    def die(self):
+        self.dying = True
+
+        self.die_counter += 1
+
+        if self.die_counter >= 10:
+
+            self.die_counter = 0
+            self.image_original = enemy_dying_list[self.die_number]
+            self.die_number += 1
+
+            if self.die_number >= 18:
+                self.dead = True
 
 # Create a wall class
 class Wall(pygame.sprite.Sprite):
@@ -449,3 +500,19 @@ class Text_Box(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = 95
         self.rect.y = 395
+
+# Mouse pointer class
+class Pointer(pygame.sprite.Sprite):
+    # Initialize the pointer class
+    def __init__(self):
+        self.image = pointer
+        self.rect = self.image.get_rect()
+
+        self.mouse_x, self.mouse_y = pygame.mouse.get_pos()
+
+    def update(self):
+        self.mouse_x, self.mouse_y = pygame.mouse.get_pos()
+        self.rect.center = (self.mouse_x, self.mouse_y)
+
+    def draw(self, surf):
+        surf.blit(self.image, self.rect)

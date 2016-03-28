@@ -2,23 +2,17 @@ import pygame
 
 # Player images
 player_standing = pygame.image.load("sprites/player/player_standing.png")
+player_killing = pygame.image.load("sprites/player/player_killing_1.png")
 
-player_walk_1 = pygame.image.load("sprites/player/player_walk_1.png")
-player_walk_2 = pygame.image.load("sprites/player/player_walk_2.png")
-player_walk_3 = pygame.image.load("sprites/player/player_walk_3.png")
-player_walk_4 = pygame.image.load("sprites/player/player_walk_4.png")
-player_walk_5 = pygame.image.load("sprites/player/player_walk_5.png")
-player_walk_6 = pygame.image.load("sprites/player/player_walk_6.png")
-player_walk_7 = pygame.image.load("sprites/player/player_walk_7.png")
-player_walk_8 = pygame.image.load("sprites/player/player_walk_8.png")
-player_walk_9 = pygame.image.load("sprites/player/player_walk_9.png")
-player_walk_10 = pygame.image.load("sprites/player/player_walk_10.png")
-player_walk_11 = pygame.image.load("sprites/player/player_walk_11.png")
-player_walk_12 = pygame.image.load("sprites/player/player_walk_12.png")
+player_list = [player_standing]
+for load_player_walk in range(12):
+    player_list.append(pygame.image.load("sprites/player/player_walk_{}.png".format(load_player_walk+1)))
 
-player_list = [ player_standing, player_walk_1, player_walk_2, player_walk_3, player_walk_4,
-                player_walk_5, player_walk_6, player_walk_7, player_walk_8,
-                player_walk_9, player_walk_10, player_walk_11, player_walk_12]
+# Enemy images
+enemy_dying_list = []
+for load_enemy_dying in range(19):
+    enemy_dying_list.append(pygame.image.load("sprites/player/enemy_dying_{}.png".format(load_enemy_dying+1)))
+
 
 # Layer 1 images
 grass_1 = pygame.image.load("sprites/layer 1/grass_1.png")
@@ -66,6 +60,13 @@ layer_3_list = [tree_1, desk_1, metal_wall_top, metal_wall_left, metal_wall_bott
                 metal_wall_tlcorner, metal_wall_trcorner, metal_wall_blcorner, metal_wall_brcorner,
                 metal_wall_90deg_lt, metal_wall_90deg_tr, metal_wall_90deg_lb, metal_wall_90deg_br,
                 office_chair_top, plant_1]
+
+# GUI and misc
+eye = pygame.image.load("sprites/gui/eye.png")
+pointer = pygame.image.load("sprites/gui/pointer.png")
+pointer_eye = pygame.image.load("sprites/gui/pointer_eye.png")
+scanlines = pygame.image.load("sprites/scanlines.png")
+scanlines_seen = pygame.image.load("sprites/scanlines_seen.png")
 
 # Face images
 npc_face_1 = pygame.image.load("sprites/faces/npc_face_1.png")
