@@ -3,6 +3,7 @@
 game controls:
 WASD: movement
 SPACE (while behind an enemy and not seen): kill enemy
+R: reset game
 
 level editor controls
 LEFT CLICK: place tile
